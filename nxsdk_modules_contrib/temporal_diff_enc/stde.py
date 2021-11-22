@@ -125,8 +125,9 @@ class STDE_group(object):
 
         connProto = nx.ConnectionPrototype(weight=weight_fac, weightExponent=exponent_fac)
 
-        sgpA.connect(neurongroup.dendrites[0].dendrites[1], prototype=connProto, connectionMask=sp.sparse.identity(num_neurons))
-        sgpB.connect(neurongroup.dendrites[0].dendrites[0], prototype=connProto, connectionMask=sp.sparse.identity(num_neurons))
+        # sgpA.connect(neurongroup.dendrites[0].dendrites[1], prototype=connProto, connectionMask=sp.sparse.identity(num_neurons))
+        # sgpB.connect(neurongroup.dendrites[0].dendrites[0], prototype=connProto, connectionMask=sp.sparse.identity(num_neurons))
+
 
         spikegens = [sgpA, sgpB]
 
