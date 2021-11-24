@@ -119,8 +119,8 @@ class STDE_group(object):
         neuronPrototype = nx.NeuronPrototype(cpD)
         neurongroup = net.createNeuronGroup(prototype=neuronPrototype, size=num_neurons)
 
-        sgpA = net.createSpikeGenProcess(numPorts=num_neurons)
-        sgpB = net.createSpikeGenProcess(numPorts=num_neurons)
+        # sgpA = net.createSpikeGenProcess(numPorts=num_neurons)
+        # sgpB = net.createSpikeGenProcess(numPorts=num_neurons)
         # sgpC = net.createSpikeGenProcess(numPorts=1)
 
         connProto = nx.ConnectionPrototype(weight=weight_fac, weightExponent=exponent_fac)
@@ -129,7 +129,7 @@ class STDE_group(object):
         # sgpB.connect(neurongroup.dendrites[0].dendrites[0], prototype=connProto, connectionMask=sp.sparse.identity(num_neurons))
 
 
-        spikegens = [sgpA, sgpB]
+        # spikegens = [sgpA, sgpB]
 
         if params['do_probes'] == 'all':
             (uA, vA, sA) = neurongroup.dendrites[0].dendrites[1].probe([nx.ProbeParameter.COMPARTMENT_CURRENT,
@@ -179,7 +179,7 @@ class STDE_group(object):
 
         self.neurongroup = neurongroup
         self.probes = probes
-        self.spikegens = spikegens
+        # self.spikegens = spikegens
         self.input0 = neurongroup.dendrites[0].dendrites[0]
         self.input1 = neurongroup.dendrites[0].dendrites[1]
         

@@ -39,7 +39,7 @@ import inspect
 from stde import STDE_group
 
 
-def startVisualizer(path, dimX=240, dimY=180):
+def startVisualizer(path, dimX=240, dimY=180, dimP=2, exec_name="/visualize_kb_spikes"):
     """Compiles and runs the DVS visualizer"""
 
     # compile the visualizer
@@ -48,12 +48,14 @@ def startVisualizer(path, dimX=240, dimY=180):
                     + str(dimX)
                     + " -D DVS_Y="
                     + str(dimY)
+                    + " -D DVS_P="
+                    + str(dimP)
                     + " -O3"
                     + " $(sdl2-config --cflags) "
                     + path
                     + " $(sdl2-config --libs)"
                     + " -o "
-                    + os.path.dirname(path) + "/visualize_kb_spikes"], shell=True)
+                    + os.path.dirname(path) + exec_name], shell=True)
 
     # setup spike fifo
     spikeFifoPath = os.path.dirname(path) + "/spikefifo"
@@ -69,7 +71,7 @@ def startVisualizer(path, dimX=240, dimY=180):
 
     # run the visualizer
     subprocess.Popen(
-        [os.path.dirname(path) + "/visualize_kb_spikes", "--source=" + spikeFifoPath])
+        [os.path.dirname(path) + exec_name, "--source=" + spikeFifoPath, "--win_title=" + exec_name])
 
 
 def setupNetwork(dimX=240, dimY=180, cp=None):
@@ -147,15 +149,18 @@ def runDVSandVisualize(visualizerPath=None,
                        dimX=240,
                        dimY=180,
                        aedatFilename=None,
-                       customSpikes=None):
+                       customSpikes=None,
+                       timesteps=10000):
     """Runs the DVS and visualizer"""
 
     net, cg, dvs, stde_group = setupNetwork(dimX=dimX, dimY=dimY)
 
     # If no visualizerPath is given, omit the visualizer
     if visualizerPath is not None:
+        # startVisualizer(visualizerPath, dimX=dimX, dimY=dimY, dimP=1, exec_name='visualize_stde')
+        # connectToVisualizer(stde_group.neurongroup.soma)
         startVisualizer(visualizerPath, dimX=dimX, dimY=dimY)
-        connectToVisualizer(stde_group.neurongroup.soma)
+        connectToVisualizer(cg)
 
     compiler = nx.N2Compiler()
     board = compiler.compile(net)
@@ -191,16 +196,15 @@ def runDVSandVisualize(visualizerPath=None,
         dvs.setupSnips(board)
 
     board.start()
-    board.run(10000)
+    board.run(timesteps)
     board.disconnect()
-    stde_group.plot()
+    # stde_group.plot()
 
 
 if __name__ == "__main__":
     # Specify
     visualizerPath = os.path.dirname(inspect.getfile(startVisualizer)) + "/visualizer/default_visualizer.c"
     aedatFilename = os.path.dirname(inspect.getfile(startVisualizer)) + '/DAVIS240C_intel.aedat'
-
 
     # print("Running Normal Full Resolution From File for 10 seconds")
     # # Pass an input aedat file.
@@ -262,16 +266,16 @@ if __name__ == "__main__":
 
     # Set a custom snip to downsample the input, but manually specify the input spikes
     print("Running Downsampled manual scan for 10 seconds")
-    timesteps = 43200
+    num_events = 240 * 180
     snipFile = os.path.dirname(inspect.getfile(startVisualizer)) + "/snips/dvs_downsample.c"
     funcName = "dvs_host_spike_injection"
     guardName = "do_dvs_spike_injection"
     # Manually specify spikes. Code below will make a vertocal  line moving
-    customSpikes = np.zeros((timesteps, 4), dtype=int)
-    customSpikes[:, 0] = (np.arange(timesteps) // 180) * 10 # time in Loihi Timesteps
-    customSpikes[:, 1] = np.arange(timesteps) // 180  # x
-    customSpikes[:, 2] = np.arange(timesteps) % 180  # y
-    customSpikes[:, 3] = np.arange(timesteps) % 2  # p
+    customSpikes = np.zeros((num_events, 4), dtype=int)
+    customSpikes[:, 0] = (np.arange(num_events) // 180) * 10 # time in Loihi Timesteps
+    customSpikes[:, 1] = np.arange(num_events) // 180  # x
+    customSpikes[:, 2] = np.arange(num_events) % 180  # y
+    customSpikes[:, 3] = np.ones(num_events)  # p
     # The visualizer and dvs module need to know about the new dimensions
     runDVSandVisualize(visualizerPath,
                        snipFile=snipFile,
@@ -279,5 +283,5 @@ if __name__ == "__main__":
                        guardName=guardName,
                        dimX=120,
                        dimY=90,
-                       customSpikes=customSpikes)
-
+                       customSpikes=customSpikes,
+                       timesteps=customSpikes[-1, 0])
