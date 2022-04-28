@@ -63,7 +63,7 @@ void dvs_live_spike_injection(runState *s) {
 // handles receiving dvs events from the host
 void dvs_host_spike_injection(runState *s) {
     //optionally slow Loihi down for real-time visualization
-    uint32_t us = 1000; 
+    uint32_t us = 1000000;
     uint64_t durationTicks = us * TICKS_PER_MICROSECOND;
     uint64_t now = timestamp();
     uint64_t deadline = now + durationTicks;

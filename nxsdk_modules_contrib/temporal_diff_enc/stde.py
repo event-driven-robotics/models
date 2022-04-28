@@ -25,6 +25,7 @@ import scipy as sp
 import nxsdk.api.n2a as nx
 from nxsdk.utils.plotutils import plotRaster
 
+
 def calculate_mant_exp(value, precision=8):
     """
     This function calculates the exponent and mantissa from a desired value. Can e.g. be used for weights.
@@ -44,7 +45,7 @@ def calculate_mant_exp(value, precision=8):
 
 
 class STDE_group(object):
-    def __init__(self, params, net=None, name=None):
+    def __init__(self, params, net=None, name=None, dvs=None):
         """
         The STDE_group contains the sTDE neurons.
         One neuron consists of 4 compartments that are connected as follows:
@@ -73,7 +74,7 @@ class STDE_group(object):
         """
         if net is None:
             net = nx.NxNet()
-            
+
         self.net = net
 
         self.num_neurons = params['num_neurons']
@@ -81,7 +82,7 @@ class STDE_group(object):
         self.probes = {}
         self.spikegens = {}
 
-        weight_fac, exponent_fac = calculate_mant_exp(params['weight_fac']/params['tau_fac'],7)
+        weight_fac, exponent_fac = calculate_mant_exp(params['weight_fac'] / params['tau_fac'], 7)
 
         # Create auxiliary compartments
         cpA = nx.CompartmentPrototype(
@@ -128,25 +129,38 @@ class STDE_group(object):
         # sgpA.connect(neurongroup.dendrites[0].dendrites[1], prototype=connProto, connectionMask=sp.sparse.identity(num_neurons))
         # sgpB.connect(neurongroup.dendrites[0].dendrites[0], prototype=connProto, connectionMask=sp.sparse.identity(num_neurons))
 
-
         # spikegens = [sgpA, sgpB]
 
         if params['do_probes'] == 'all':
-            (uA, vA, sA) = neurongroup.dendrites[0].dendrites[1].probe([nx.ProbeParameter.COMPARTMENT_CURRENT,
-                                                                        nx.ProbeParameter.COMPARTMENT_VOLTAGE,
-                                                                        nx.ProbeParameter.SPIKE])
+            x = 4
+            y = 5
+            p = 0
+            dimP = 2
+            dimX = 50
+            dimY = 50
+            neuronIdx = p + dimP * y + dimP * dimY * x
+            x_check, y_check, p_check = dvs.outputs.rawDVS.getPixelId(neuronIdx)
+            assert (x == x_check)
+            assert (y == y_check)
+            assert (p == p_check)
 
-            (uB, vB, sB) = neurongroup.dendrites[0].dendrites[0].probe([nx.ProbeParameter.COMPARTMENT_CURRENT,
-                                                                        nx.ProbeParameter.COMPARTMENT_VOLTAGE,
-                                                                        nx.ProbeParameter.SPIKE])
+            (uA, vA, sA) = neurongroup.dendrites[0].dendrites[1][neuronIdx].probe(
+                [nx.ProbeParameter.COMPARTMENT_CURRENT,
+                 nx.ProbeParameter.COMPARTMENT_VOLTAGE,
+                 nx.ProbeParameter.SPIKE])
 
-            (uC, vC, sC) = neurongroup.dendrites[0].probe([nx.ProbeParameter.COMPARTMENT_CURRENT,
-                                                           nx.ProbeParameter.COMPARTMENT_VOLTAGE,
-                                                           nx.ProbeParameter.SPIKE])
+            (uB, vB, sB) = neurongroup.dendrites[0].dendrites[0][neuronIdx].probe(
+                [nx.ProbeParameter.COMPARTMENT_CURRENT,
+                 nx.ProbeParameter.COMPARTMENT_VOLTAGE,
+                 nx.ProbeParameter.SPIKE])
 
-            (uD, vD, sD) = neurongroup.soma.probe([nx.ProbeParameter.COMPARTMENT_CURRENT,
-                                                   nx.ProbeParameter.COMPARTMENT_VOLTAGE,
-                                                   nx.ProbeParameter.SPIKE])
+            (uC, vC, sC) = neurongroup.dendrites[0][neuronIdx].probe([nx.ProbeParameter.COMPARTMENT_CURRENT,
+                                                                      nx.ProbeParameter.COMPARTMENT_VOLTAGE,
+                                                                      nx.ProbeParameter.SPIKE])
+
+            (uD, vD, sD) = neurongroup.soma[neuronIdx].probe([nx.ProbeParameter.COMPARTMENT_CURRENT,
+                                                              nx.ProbeParameter.COMPARTMENT_VOLTAGE,
+                                                              nx.ProbeParameter.SPIKE])
 
             probes = {
                 'A_current': uA,
@@ -182,31 +196,31 @@ class STDE_group(object):
         # self.spikegens = spikegens
         self.input0 = neurongroup.dendrites[0].dendrites[0]
         self.input1 = neurongroup.dendrites[0].dendrites[1]
-        
 
     def add_spikes(self, spiketimes_a, indices_a, spiketimes_b, indices_b):
         for sg_neuron in range(self.num_neurons):
             self.spikegens[0].addSpikes(spikeInputPortNodeIds=sg_neuron,
-                                   spikeTimes=np.asarray(spiketimes_a)[
-                                       np.where(np.asarray(indices_a) == sg_neuron)[0]].tolist())
+                                        spikeTimes=np.asarray(spiketimes_a)[
+                                            np.where(np.asarray(indices_a) == sg_neuron)[0]].tolist())
             self.spikegens[1].addSpikes(spikeInputPortNodeIds=sg_neuron,
-                                   spikeTimes=np.asarray(spiketimes_b)[
-                                       np.where(np.asarray(indices_b) == sg_neuron)[0]].tolist())
+                                        spikeTimes=np.asarray(spiketimes_b)[
+                                            np.where(np.asarray(indices_b) == sg_neuron)[0]].tolist())
 
     def plot(self, num_steps=None):
         if num_steps is None:
-            num_steps = len(self.probes['A_spikes'].data[0])
-        
+            num_steps = len(self.probes['A_spikes'].data)
+
         num_probes = len(self.probes)
-        
+
         # Plot the results
         fig = plt.figure(1, figsize=(18, 10))
 
         for i, key in enumerate(np.sort(list(self.probes.keys()))):
-            plt.subplot(int(num_probes/3),3, i + 1)
+            plt.subplot(1, num_probes, i + 1)
             self.probes[key].plot()
             # plt.plot(probes[key].data.T)
             plt.title(key)
             plt.xlim([0, num_steps])
-        
+
         plt.tight_layout()
+        plt.show()
