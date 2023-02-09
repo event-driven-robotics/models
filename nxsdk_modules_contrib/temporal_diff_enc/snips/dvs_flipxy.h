@@ -20,8 +20,8 @@ expressly stated in the License.
 #include "nxsdk.h"
 
 #define COMPARTMENTS_PER_CORE 1024
-#define WIDTH 240
-#define HEIGHT 180
+#define WIDTH 5
+#define HEIGHT 5
 
 int do_dvs_spike_injection(runState *s);
 void dvs_live_spike_injection(runState *s);

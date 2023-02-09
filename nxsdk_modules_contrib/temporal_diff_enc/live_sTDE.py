@@ -33,12 +33,22 @@ NOTES
 flashing squares only of one polarity, we need to understand how to connect and how the polarities are arranged into the visual field
 
 
-commands to run loihi (getting_started_kb.html):
+commands to run loihi (nxsdk_apps1.0.0/docs/getting_started_kb.html):
 lsusb -t ---> check if your see the FTDI interfaces. If the driver says ftdi_sio,
-you may remove these kernel modules using sudo rmmod ftdi_sio. Run lsusb -t to ensure that ftdi_sio is no longer there
+you may remove these kernel modules using sudo rmmod ftdi_sio &  workon loihi.
+export KAPOHOBAY=1
+
+--- python3 -c "import nxsdk; print(nxsdk.__path__[0])"`/bin/x86/kb/nx --test-fpio ---
+Run lsusb -t to ensure that ftdi_sio is no longer there
+
+sum up:
+-we know the connections but we do not understand why we get stripes when we flash the whole visual field
 
 
 """
+
+import sys
+sys.path.append('/home/giuliadangelo/workspace/code/nxsdk-apps-1.0.0/')
 
 import nxsdk.api.n2a as nx
 from nxsdk_modules.dvs.src.dvs import DVS
@@ -49,7 +59,6 @@ import os
 import errno
 import inspect
 from nxsdk_modules_contrib.temporal_diff_enc.stde import STDE_group
-
 
 def startVisualizer(path, dimX=240, dimY=180, dimP=2, exec_name="/visualize_kb_spikes"):
     """Compiles and runs the DVS visualizer"""
@@ -105,10 +114,11 @@ def setupNetwork(dimX=240, dimY=180, cp=None, stde_layer=False):
                                      compartmentCurrentDecay=4095,
                                      compartmentVoltageDecay=4095)
     # creating a series of compartments of the same kind, cg maybe unnecessary
-    cg = net.createCompartmentGroup(size=(dvs.numPixels), prototype=cp)
+    cg = net.createCompartmentGroup(size=dvs.numPixels, prototype=cp)
     # create network with compartments of the same kind
     dvs.outputs.rawDVS.connect(cg, prototype=connproto, connectionMask=sps.identity(dvs.numPixels))
-    # dvs.outputs.rawDVS.connect(cg, prototype=connproto, connectionMask=sps.block_diag(np.arange(dvs.numPixels) % 2))
+    # dvs.outputs.rawDVS.connect(cg, prototype=connproto, connectionMask=sps.block_diag([1,0,1,1]))
+
     # dvs.outputs.rawDVS.connect(cg, prototype=connproto, connectionMask=sps.block_diag(np.concatenate([np.ones(dvs.numPixels//2), np.zeros(dvs.numPixels//2)])))
 
     if stde_layer:
@@ -121,7 +131,7 @@ def setupNetwork(dimX=240, dimY=180, cp=None, stde_layer=False):
                   'num_neurons': int(dvs.numPixels / 2),
                   }
 
-        stde_group = STDE_group(params, net=net, dvs=dvs)
+        stde_group = STDE_group(params, dimX, dimY, net=net, dvs=dvs)
 
         # last_col_ids_pos = np.arange(-1, dvs.numPixels, dimX * dvs.pResolution, dtype=int)[1:]
         # last_col_ids_neg = np.arange(-2, dvs.numPixels, dimX * dvs.pResolution, dtype=int)[1:]
@@ -153,7 +163,11 @@ def setupNetwork(dimX=240, dimY=180, cp=None, stde_layer=False):
                                    connectionMask=maskFacilitator)
     else:
         stde_group = None
-    return net, cg, dvs, stde_group
+
+    probeParameters = [nx.ProbeParameter.SPIKE]
+    probes = cg.probe(probeParameters, None)
+
+    return net, cg, dvs, stde_group, probes
 
 
 def connectToVisualizer(outputCompartmentGroup):
@@ -174,7 +188,7 @@ def runDVSandVisualize(visualizerPath=None,
     """Runs the DVS and visualizer"""
     visualiseFLAG = True
     stde_layer = False
-    net, cg, dvs, stde_group = setupNetwork(dimX=dimX, dimY=dimY, stde_layer=stde_layer)
+    net, cg, dvs, stde_group, probes = setupNetwork(dimX=dimX, dimY=dimY, stde_layer=stde_layer)
 
     # If no visualizerPath is given, omit the visualizer
     if visualizerPath is not None:
@@ -221,7 +235,8 @@ def runDVSandVisualize(visualizerPath=None,
     board.start()
     board.run(timesteps)
     board.disconnect()
-    stde_group.plot()
+    if stde_group is not None:
+        stde_group.plot()
 
 
 if __name__ == "__main__":
@@ -229,13 +244,13 @@ if __name__ == "__main__":
     visualizerPath = os.path.dirname(inspect.getfile(startVisualizer)) + "/visualizer/default_visualizer.c"
     aedatFilename = os.path.dirname(inspect.getfile(startVisualizer)) + '/DAVIS240C_intel.aedat'
 
-    full_resolution = True
+    full_resolution = False
     downsampled_resolution = False
     downsampled_manual = False
-    inject_custom_spikes = False
+    inject_custom_spikes = True
 
-    dimX = 240
-    dimY = 180
+    dimX = 5
+    dimY = 5
 
     if full_resolution:
         print("Running Normal Full Resolution From File for 10 seconds")
@@ -321,4 +336,4 @@ if __name__ == "__main__":
                            dimX=dimX,
                            dimY=dimY,
                            customSpikes=customSpikes,
-                           timesteps=customSpikes[-1, 0])
+                           timesteps=customSpikes[-1, 0] + 1)

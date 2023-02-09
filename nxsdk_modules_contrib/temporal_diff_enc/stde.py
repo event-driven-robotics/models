@@ -45,7 +45,7 @@ def calculate_mant_exp(value, precision=8):
 
 
 class STDE_group(object):
-    def __init__(self, params, net=None, name=None, dvs=None):
+    def __init__(self, params, dimX, dimY, net=None, name=None, dvs=None):
         """
         The STDE_group contains the sTDE neurons.
         One neuron consists of 4 compartments that are connected as follows:
@@ -136,8 +136,8 @@ class STDE_group(object):
             y = 5
             p = 0
             dimP = 2
-            dimX = 50
-            dimY = 50
+            # dimX = 50
+            # dimY = 50
             neuronIdx = p + dimP * y + dimP * dimY * x
             x_check, y_check, p_check = dvs.outputs.rawDVS.getPixelId(neuronIdx)
             assert (x == x_check)

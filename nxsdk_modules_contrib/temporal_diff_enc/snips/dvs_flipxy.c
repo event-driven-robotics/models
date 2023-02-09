@@ -93,6 +93,10 @@ void inject_dvs_spike(uint8_t x, uint8_t y, uint8_t p, uint8_t t) {
 
         //send spike
         nx_send_discrete_spike(t, core, axon);
+        printf("snip received event at x=%d, y=%d, p=%d, time=%d\n", x,y,p,t);
+        printf("snip injecting spikes to core %d, neuron %d\n", logicalCore, axon);
+
+
     }
 }
 
